@@ -1,53 +1,43 @@
+import skopt
+import warnings
+from skopt.space.space import Categorical
+from scipy.optimize import OptimizeResult
 from enum import Enum
-from dataclasses import dataclass
-from typing import TypeVar, Generic, Type, Optional
+from typing import Callable, Optional
+from fragments.strategy import Strategy
+from fragments.indicators import OHLCV
 
 
-T = TypeVar("T")
-
-
-@dataclass
-class ParamCell(Generic[T]):
-    bounds: tuple[int, int] | list[Enum]
-    value: T
-
-
-class ParamStorage:
-    cells: list[ParamCell[int | Enum]]
-
-    def __init__(self):
-        self.cells = list()
-
-    def get_cell_bounds(self) -> list[tuple[int, int] | list[Enum]]:
-        return [cell.bounds for cell in self.cells]
-
-    def apply_cell_values(self, values: list[int | Enum]):
-        if len(values) != len(self.cells):
-            raise RuntimeError(
-                f"length of list of values is {len(values)}, should be {len(self.cells)}"
-            )
-        for cell, value in zip(self.cells, values):
-            if not isinstance(cell.value, type(value)):
-                raise TypeError(
-                    f"cannot apply value type {type(value)} to cell type {type(cell.value)}"
-                )
-            cell.value = value
-
-    def create_cell(
-        self, bounds: tuple[int, int] | list[Enum], value: Optional[int | Enum] = None
-    ) -> ParamCell:
-        if value is None:
-            self.cells.append(ParamCell(bounds, bounds[0]))
+def convert_cell_bounds_skopt(
+    cell_bounds: list[tuple[int, int] | list[Enum]]
+) -> list[tuple[int, int] | Categorical]:
+    converted_bounds = list()
+    for bounds in cell_bounds:
+        if isinstance(bounds, list):
+            converted_bounds.append(Categorical(bounds))
         else:
-            self.cells.append(ParamCell(bounds, value))
-        return self.cells[-1]
+            converted_bounds.append(bounds)
+    return converted_bounds
 
-    def create_default_numerical_cell(self) -> ParamCell:
-        self.cells.append(ParamCell((0, 1), 0))
-        return self.cells[-1]
 
-    def create_default_categorical_cell(self, enum: Type[Enum]) -> ParamCell:
-        self.cells.append(
-            ParamCell((j := [i for i in enum.__members__.values()]), j[0])
+def optimize(
+    strategy: Strategy,
+    func: Callable[[Strategy], float],
+    ohlcv_list: list[OHLCV],
+    random_state: Optional[int] = None,
+) -> OptimizeResult:
+    strategy.forward_all(ohlcv_list)
+    strategy.reset()
+    optim_func: Callable[[list[int | Enum]], float] = lambda values: 1 / max(
+        1e-8, func(strategy.update_and_forward_all(values, ohlcv_list))
+    )
+    with warnings.catch_warnings():  # FIXME: should be removed as soon as skopt is updated to no longer use np.int
+        warnings.simplefilter("ignore")
+        results = skopt.gp_minimize(
+            optim_func,
+            convert_cell_bounds_skopt(strategy.param_storage.get_cell_bounds()),
+            random_state=random_state,
         )
-        return self.cells[-1]
+    if results is None:
+        raise RuntimeError("skopt.gp_minimize didn't return a result")
+    return results

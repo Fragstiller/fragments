@@ -1,6 +1,6 @@
 import unittest
-from fragments.indicator import *
-from fragments.optim import ParamStorage
+from fragments.indicators import *
+from fragments.params import ParamStorage
 
 
 class TestIndicators(unittest.TestCase):

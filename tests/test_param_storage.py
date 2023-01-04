@@ -1,6 +1,6 @@
 import unittest
 from enum import Enum
-from fragments.optim import *
+from fragments.params import *
 
 
 class TestCategory(Enum):

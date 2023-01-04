@@ -1,6 +1,6 @@
 import unittest
 from fragments.strategy import *
-from fragments.optim import ParamStorage
+from fragments.params import ParamStorage
 
 
 class TestTrade(unittest.TestCase):

@@ -3,8 +3,8 @@ from typing import Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from abc import ABC
-from fragments.optim import ParamCell, ParamStorage
-from fragments.indicator import Indicator, OHLCV
+from fragments.params import ParamCell, ParamStorage
+from fragments.indicators import Indicator, OHLCV
 
 
 class Action(Enum):
@@ -12,6 +12,12 @@ class Action(Enum):
     SELL = 2
     CANCEL = 3
     PASS = 4
+
+
+class ActionLogic(Enum):
+    AND = 1
+    OR = 2
+    IGNORE = 3
 
 
 class TradeDirection(Enum):
@@ -53,6 +59,7 @@ class Strategy(ABC):
     param_storage: ParamStorage
     previous: Optional[Strategy]
     action: Action
+    action_logic: Optional[ParamCell[ActionLogic]]
     trades: list[Trade]
     _in_trade: bool = False
 
@@ -63,6 +70,9 @@ class Strategy(ABC):
         self.trades = list()
         if previous is not None:
             self.previous = previous
+            self.action_logic = self.param_storage.create_default_categorical_cell(
+                ActionLogic
+            )
         else:
             self.previous = None
 
@@ -70,12 +80,34 @@ class Strategy(ABC):
         if self.previous is not None:
             self.previous.forward(ohlcv)
 
-    def _apply_action(self, ohlcv: OHLCV, action: Action):
+    def forward_all(self, ohlcv_list: list[OHLCV]):
+        for ohlcv in ohlcv_list:
+            self.forward(ohlcv)
+
+    def update_and_forward_all(
+        self, values: list[int | Enum], ohlcv_list: list[OHLCV]
+    ) -> Strategy:
+        self.reset()
+        self.param_storage.apply_cell_values(values)
+        self.forward_all(ohlcv_list)
+        return self
+
+    def reset(self):
         if self.previous is not None:
+            self.previous.reset()
+        self.trades = list()
+        self._in_trade = False
+
+    def _apply_action(self, ohlcv: OHLCV, action: Action):
+        if self.previous is not None and self.action_logic is not None:
             if self.previous.action == action:
                 self.action = action
-            elif self.previous.action == Action.CANCEL:
-                self.action = Action.CANCEL
+            match self.action_logic.value:
+                case ActionLogic.OR:
+                    if action == Action.PASS:
+                        self.action = self.previous.action
+                case ActionLogic.IGNORE:
+                    self.action = action
         else:
             self.action = action
         match self.action:

@@ -1,8 +1,8 @@
 import unittest
 from fragments.strategy import *
 from typing import cast
-from fragments.indicator import RSI
-from fragments.optim import ParamStorage
+from fragments.indicators import RSI
+from fragments.params import ParamStorage
 
 
 class TestStrategies(unittest.TestCase):

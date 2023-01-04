@@ -1,7 +1,7 @@
 from typing import Optional
 from abc import ABC, abstractmethod
 import talipp.indicators
-from fragments.optim import ParamCell, ParamStorage
+from fragments.params import ParamCell, ParamStorage
 
 
 OHLCV = tuple[float, float, float, float, float]
