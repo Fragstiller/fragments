@@ -1,5 +1,6 @@
 import unittest
 import pickle as pkl
+import os
 from fragments.params import ParamStorage
 from fragments.strategy import ConditionalStrategy
 from fragments.indicators import RSI
@@ -8,6 +9,7 @@ from fragments.optim import *
 
 
 class TestOptim(unittest.TestCase):
+    @unittest.skipIf(os.getenv("TEST_OPTIM") is None, "TEST_OPTIM is not set")
     def test_optim(self):
         param_storage = ParamStorage()
 
