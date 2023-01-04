@@ -102,12 +102,17 @@ class Strategy(ABC):
         if self.previous is not None and self.action_logic is not None:
             if self.previous.action == action:
                 self.action = action
+            else:
+                self.action = action.PASS
             match self.action_logic.value:
                 case ActionLogic.OR:
                     if action == Action.PASS:
                         self.action = self.previous.action
                 case ActionLogic.IGNORE:
-                    self.action = action
+                    if action == Action.PASS:
+                        self.action = self.previous.action
+                    else:
+                        self.action = action
         else:
             self.action = action
         match self.action:
