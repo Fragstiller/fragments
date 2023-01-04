@@ -185,3 +185,49 @@ class ConditionalStrategy(Strategy):
                     if indicator_value >= self.condition_threshold.value:
                         action = self.on_condition.value
         self._apply_action(ohlcv, action)
+
+
+class LimiterType(Enum):
+    StopLoss = 1
+    TakeProfit = 2
+
+
+class LimiterStrategy(Strategy):
+    indicator: Indicator
+    limiter_multiplier: ParamCell[int]
+    limiter_type: ParamCell[LimiterType]
+    _limiter_threshold: float
+
+    def __init__(
+        self,
+        indicator: Indicator,
+        param_storage: ParamStorage,
+        previous: Optional[Strategy] = None,
+    ):
+        super().__init__(param_storage, previous)
+        self.indicator = indicator
+        self.limiter_multiplier = self.param_storage.create_cell((10, 200), 100)
+        self.limiter_type = self.param_storage.create_default_categorical_cell(
+            LimiterType
+        )
+        if self.action_logic is not None:
+            self.action_logic.value = ActionLogic.IGNORE
+            self.action_logic.bounds = [ActionLogic.IGNORE]
+
+    def forward(self, ohlcv: OHLCV):
+        super().forward(ohlcv)
+        action = Action.PASS
+        indicator_value = self.indicator.forward(ohlcv)
+        if len(self.trades) != 0:
+            if self.trades[-1].profit == 0 and indicator_value is not None:
+                self._limiter_threshold = indicator_value * (
+                    self.limiter_multiplier.value / 100
+                )
+            if (
+                self.limiter_type == LimiterType.StopLoss
+                and self.trades[-1].profit <= -self._limiter_threshold
+            ):
+                action = Action.CANCEL
+            elif self.trades[-1].profit > self._limiter_threshold:
+                action = Action.CANCEL
+        self._apply_action(ohlcv, action)

@@ -1,7 +1,7 @@
 import unittest
 from fragments.strategy import *
 from typing import cast
-from fragments.indicators import RSI
+from fragments.indicators import RSI, ATR
 from fragments.params import ParamStorage
 
 
@@ -21,6 +21,29 @@ class TestStrategies(unittest.TestCase):
         self.assertEqual(len(strategy.trades), 1)
         strategy.forward((0, 0, 0, 1, 0))
         self.assertEqual(len(strategy.trades), 1)
+
+    def test_limiter_strategy(self):
+        param_storage = ParamStorage()
+        strategies = list()
+
+        strategies.append(ConditionalStrategy(RSI(param_storage), param_storage))
+        strategies[0].condition_type.value = ConditionType.MORE_THAN
+        strategies[0].on_condition.value = Action.BUY
+        cast(RSI, strategies[0].indicator).period.value = 2
+
+        strategies.append(
+            LimiterStrategy(ATR(param_storage), param_storage, strategies[0])
+        )
+        strategies[1].limiter_type.value = LimiterType.TakeProfit
+
+        strategies[1].forward((0, 0, 0, 1, 0))
+        strategies[1].forward((0, 0, 0, 2, 0))
+        strategies[1].forward((0, 0, 0, 1, 0))
+        strategies[1].forward((0, 0, 0, 2, 0))
+        strategies[1].forward((0, 0, 0, 3, 0))
+        strategies[1].forward((0, 0, 0, 0, 0))
+
+        self.assertEqual(strategies[1].trades[-1].profit, 100)
 
     def test_conditional_strategy_bounds(self):
         param_storage = ParamStorage()
