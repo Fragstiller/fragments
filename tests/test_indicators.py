@@ -9,3 +9,9 @@ class TestIndicators(unittest.TestCase):
         self.assertEqual(rsi.forward((0, 0, 0, 1, 0)), None)
         self.assertEqual(rsi.forward((0, 0, 0, 2, 0)), None)
         self.assertEqual(rsi.forward((0, 0, 0, 1, 0)), 50.0)
+
+    def test_atr(self):
+        atr = ATR(ParamStorage())
+        self.assertEqual(atr.forward((0, 0, 0, 1, 0)), None)
+        self.assertEqual(atr.forward((0, 0, 0, 2, 0)), 0.5)
+        self.assertEqual(atr.forward((0, 0, 0, 1, 0)), 1.25)
