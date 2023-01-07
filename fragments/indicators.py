@@ -15,6 +15,10 @@ class Indicator(ABC):
         self.param_storage = param_storage
 
     @abstractmethod
+    def reset(self):
+        pass
+
+    @abstractmethod
     def forward(self, ohlcv: OHLCV) -> Optional[float]:
         pass
 
@@ -26,6 +30,9 @@ class RSI(Indicator):
     def __init__(self, param_storage: ParamStorage):
         super().__init__(param_storage)
         self.period = self.param_storage.create_cell((2, 240))
+        self.wrapped_indicator = talipp.indicators.RSI(self.period.value)
+
+    def reset(self):
         self.wrapped_indicator = talipp.indicators.RSI(self.period.value)
 
     def forward(self, ohlcv: OHLCV) -> Optional[float]:
@@ -46,6 +53,9 @@ class ATR(Indicator):
         self.period = self.param_storage.create_cell((2, 240))
         self.wrapped_indicator = talipp.indicators.ATR(self.period.value)
 
+    def reset(self):
+        self.wrapped_indicator = talipp.indicators.ATR(self.period.value)
+
     def forward(self, ohlcv: OHLCV) -> Optional[float]:
         if self.period.value != self.wrapped_indicator.period:
             self.wrapped_indicator = talipp.indicators.ATR(self.period.value)
@@ -62,6 +72,9 @@ class SMA(Indicator):
     def __init__(self, param_storage: ParamStorage):
         super().__init__(param_storage)
         self.period = self.param_storage.create_cell((2, 240))
+        self.wrapped_indicator = talipp.indicators.SMA(self.period.value)
+
+    def reset(self):
         self.wrapped_indicator = talipp.indicators.SMA(self.period.value)
 
     def forward(self, ohlcv: OHLCV) -> Optional[float]:

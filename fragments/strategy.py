@@ -161,6 +161,10 @@ class ConditionalStrategy(Strategy):
         )
         self.on_condition = self.param_storage.create_default_categorical_cell(Action)
 
+    def reset(self):
+        super().reset()
+        self.indicator.reset()
+
     def forward(self, ohlcv: OHLCV):
         super().forward(ohlcv)
         action = Action.PASS
@@ -213,6 +217,10 @@ class LimiterStrategy(Strategy):
         if self.action_logic is not None:
             self.action_logic.value = ActionLogic.IGNORE
             self.action_logic.bounds = [ActionLogic.IGNORE]
+
+    def reset(self):
+        super().reset()
+        self.indicator.reset()
 
     def forward(self, ohlcv: OHLCV):
         super().forward(ohlcv)
