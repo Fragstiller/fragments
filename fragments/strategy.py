@@ -239,3 +239,82 @@ class LimiterStrategy(Strategy):
             elif self.trades[-1].profit > self._limiter_threshold:
                 action = Action.CANCEL
         self._apply_action(ohlcv, action)
+
+
+class CrossoverDirection(Enum):
+    UP = 1
+    DOWN = 2
+    BOTH = 3
+
+
+class CrossoverHandling(Enum):
+    REGULAR = 1
+    INVERTED = 2
+
+
+class CrossoverStrategy(Strategy):
+    first_indicator: Indicator
+    second_indicator: Indicator
+    crossover_direction: ParamCell[CrossoverDirection]
+    crossover_handling: ParamCell[CrossoverHandling]
+    _prev_first_value: float | None = None
+    _prev_second_value: float | None = None
+
+    def __init__(
+        self,
+        first_indicator: Indicator,
+        second_indicator: Indicator,
+        param_storage: ParamStorage,
+        previous: Optional[Strategy] = None,
+    ):
+        super().__init__(param_storage, previous)
+        self.first_indicator = first_indicator
+        self.second_indicator = second_indicator
+        self.crossover_direction = self.param_storage.create_default_categorical_cell(
+            CrossoverDirection
+        )
+        self.crossover_handling = self.param_storage.create_default_categorical_cell(
+            CrossoverHandling
+        )
+
+    def reset(self):
+        super().reset()
+        self._prev_first_value = None
+        self._prev_second_value = None
+        self.first_indicator.reset()
+        self.second_indicator.reset()
+
+    def forward(self, ohlcv: OHLCV):
+        super().forward(ohlcv)
+        action = Action.PASS
+        first_value = self.first_indicator.forward(ohlcv)
+        second_value = self.second_indicator.forward(ohlcv)
+        if first_value is not None and second_value is not None:
+            if self._prev_first_value is None or self._prev_second_value is None:
+                self._prev_first_value = first_value
+                self._prev_second_value = second_value
+            elif (
+                self._prev_first_value is not None
+                and self._prev_second_value is not None
+            ):
+                if (
+                    self._prev_first_value <= self._prev_second_value
+                    and first_value > second_value
+                    and self.crossover_direction.value
+                    in [CrossoverDirection.UP, CrossoverDirection.BOTH]
+                ):
+                    if self.crossover_handling == CrossoverHandling.REGULAR:
+                        action = Action.BUY
+                    else:
+                        action = Action.SELL
+                elif (
+                    self._prev_first_value >= self._prev_second_value
+                    and first_value < second_value
+                    and self.crossover_direction.value
+                    in [CrossoverDirection.DOWN, CrossoverDirection.BOTH]
+                ):
+                    if self.crossover_handling == CrossoverHandling.REGULAR:
+                        action = Action.SELL
+                    else:
+                        action = Action.BUY
+        self._apply_action(ohlcv, action)

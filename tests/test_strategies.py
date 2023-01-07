@@ -1,7 +1,7 @@
 import unittest
 from fragments.strategy import *
 from typing import cast
-from fragments.indicators import RSI, ATR
+from fragments.indicators import RSI, ATR, SMA
 from fragments.params import ParamStorage
 
 
@@ -20,6 +20,23 @@ class TestStrategies(unittest.TestCase):
         strategy.forward((0, 0, 0, 1, 0))
         self.assertEqual(len(strategy.trades), 1)
         strategy.forward((0, 0, 0, 1, 0))
+        self.assertEqual(len(strategy.trades), 1)
+
+    def test_crossover_strategy(self):
+        param_storage = ParamStorage()
+        strategy = CrossoverStrategy(
+            SMA(param_storage), SMA(param_storage), param_storage
+        )
+        cast(SMA, strategy.first_indicator).period.value = 2
+        cast(SMA, strategy.second_indicator).period.value = 3
+
+        strategy.forward((0, 0, 0, 1, 0))
+        self.assertEqual(len(strategy.trades), 0)
+        strategy.forward((0, 0, 0, 1, 0))
+        self.assertEqual(len(strategy.trades), 0)
+        strategy.forward((0, 0, 0, 1, 0))
+        self.assertEqual(len(strategy.trades), 0)
+        strategy.forward((0, 0, 0, 2, 0))
         self.assertEqual(len(strategy.trades), 1)
 
     def test_limiter_strategy(self):
