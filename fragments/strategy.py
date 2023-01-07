@@ -97,6 +97,7 @@ class Strategy(ABC):
         if self.previous is not None:
             self.previous.reset()
         self.trades = list()
+        self.equity = 100.0
         self._in_trade = False
 
     def _apply_action(self, ohlcv: OHLCV, action: Action):
