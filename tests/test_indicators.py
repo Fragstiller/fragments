@@ -15,3 +15,9 @@ class TestIndicators(unittest.TestCase):
         self.assertEqual(atr.forward((0, 0, 0, 1, 0)), None)
         self.assertEqual(atr.forward((0, 0, 0, 2, 0)), 0.5)
         self.assertEqual(atr.forward((0, 0, 0, 1, 0)), 1.25)
+
+    def test_sma(self):
+        atr = SMA(ParamStorage())
+        self.assertEqual(atr.forward((0, 0, 0, 1, 0)), None)
+        self.assertEqual(atr.forward((0, 0, 0, 2, 0)), 1.5)
+        self.assertEqual(atr.forward((0, 0, 0, 1, 0)), 1.5)
