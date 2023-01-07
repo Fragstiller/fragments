@@ -127,8 +127,6 @@ class Strategy(ABC):
         else:
             self.action = action
 
-        self.equity = self.trades[-1].value + self.trades[-1].profit
-        self.hist_equity.append(self.equity)
         match self.action:
             case Action.BUY:
                 if (
@@ -152,6 +150,8 @@ class Strategy(ABC):
                 self._in_trade = False
         if self._in_trade:
             self.trades[-1].forward(ohlcv)
+            self.equity = self.trades[-1].value + self.trades[-1].profit
+        self.hist_equity.append(self.equity)
 
 
 class ConditionType(Enum):
