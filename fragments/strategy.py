@@ -66,6 +66,7 @@ class Strategy(ABC):
     trades: list[Trade]
     iteration = 0
     equity: float = 100.0
+    hist_equity: list[float]
     _in_trade: bool = False
 
     def __init__(
@@ -73,6 +74,7 @@ class Strategy(ABC):
     ):
         self.param_storage = param_storage
         self.trades = list()
+        self.hist_equity = list()
         if previous is not None:
             self.previous = previous
             self.action_logic = self.param_storage.create_default_categorical_cell(
@@ -104,6 +106,7 @@ class Strategy(ABC):
         self.trades = list()
         self.iteration = 0
         self.equity = 100.0
+        self.hist_equity = list()
         self._in_trade = False
 
     def _apply_action(self, ohlcv: OHLCV, action: Action):
@@ -124,8 +127,8 @@ class Strategy(ABC):
         else:
             self.action = action
 
-        if self.action != Action.PASS and len(self.trades) != 0:
-            self.equity += self.trades[-1].profit
+        self.equity = self.trades[-1].value + self.trades[-1].profit
+        self.hist_equity.append(self.equity)
         match self.action:
             case Action.BUY:
                 if (
