@@ -322,3 +322,63 @@ class CrossoverStrategy(Strategy):
                     else:
                         action = Action.BUY
         self._apply_action(ohlcv, action)
+
+
+class InvertingStrategy(Strategy):
+    indicator: Optional[Indicator] = None
+    invert_drawdown_duration: ParamCell[int]
+    duration_multiplier: ParamCell[int]
+    _peak_equity: float = 0
+    _drawdown_duration: int = 0
+    _invert: bool = False
+
+    def __init__(
+        self,
+        param_storage: ParamStorage,
+        indicator: Optional[Indicator] = None,
+        previous: Optional[Strategy] = None,
+    ):
+        super().__init__(param_storage, previous)
+        if indicator is not None:
+            self.indicator = indicator
+        self.invert_drawdown_duration = self.param_storage.create_cell((7, 90))
+        self.duration_multiplier = self.param_storage.create_cell((1, 1440))
+        if self.action_logic is not None:
+            self.action_logic.value = ActionLogic.IGNORE
+            self.action_logic.bounds = [ActionLogic.IGNORE]
+
+    def reset(self):
+        super().reset()
+        self._peak_equity = 0
+        self._drawdown_duration = 0
+        if self.indicator is not None:
+            self.indicator.reset()
+
+    def forward(self, ohlcv: OHLCV):
+        super().forward(ohlcv)
+        self._apply_action(ohlcv, Action.PASS)
+        if self.indicator is not None:
+            processed_equity = self.indicator.forward((0, 0, 0, self.equity, 0))
+        else:
+            processed_equity = self.equity
+        if processed_equity is not None:
+            if processed_equity > self._peak_equity:
+                self._peak_equity = self.equity
+                self._drawdown_duration = 0
+            else:
+                self._drawdown_duration += 1
+        if (
+            self._drawdown_duration
+            > self.invert_drawdown_duration.value * self.duration_multiplier.value
+        ):
+            self._invert = not self._invert
+        action = Action.PASS
+        if self._invert:
+            if self.action == Action.BUY or self.action == Action.SELL:
+                self._in_trade = False
+                self.trades.pop()
+            if self.action == Action.BUY:
+                action = Action.SELL
+            elif self.action == Action.SELL:
+                action = Action.BUY
+        self._apply_action(ohlcv, action)

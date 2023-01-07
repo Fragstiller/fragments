@@ -62,6 +62,33 @@ class TestStrategies(unittest.TestCase):
 
         self.assertEqual(strategies[1].trades[-1].profit, 100)
 
+    def test_inverting_strategy(self):
+        param_storage = ParamStorage()
+
+        strategies = list()
+
+        strategies.append(ConditionalStrategy(RSI(param_storage), param_storage))
+        strategies[0].condition_type.value = ConditionType.MORE_THAN
+        strategies[0].on_condition.value = Action.BUY
+
+        strategies.append(
+            ConditionalStrategy(RSI(param_storage), param_storage, strategies[0])
+        )
+        strategies[1].condition_type.value = ConditionType.MORE_THAN
+        strategies[1].on_condition.value = Action.BUY
+        cast(RSI, strategies[1].indicator).period.value = 15
+
+        strategies.append(InvertingStrategy(param_storage, previous=strategies[1]))
+
+        strategies[2].forward((0, 0, 0, 1, 0))
+        strategies[2].forward((0, 0, 0, 1, 0))
+        strategies[2].forward((0, 0, 0, 1, 0))
+        for _ in range(3):
+            strategies[2].forward((0, 0, 0, 1, 0))
+        for _ in range(13):
+            strategies[2].forward((0, 0, 0, 0.5, 0))
+        self.assertEqual(strategies[2].action, Action.SELL)
+
     def test_conditional_strategy_bounds(self):
         param_storage = ParamStorage()
         strategy = ConditionalStrategy(RSI(param_storage), param_storage)
