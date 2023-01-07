@@ -109,7 +109,7 @@ class Strategy(ABC):
         self.hist_equity = list()
         self._in_trade = False
 
-    def _apply_action(self, ohlcv: OHLCV, action: Action):
+    def _apply_action(self, ohlcv: OHLCV, action: Action, logic_only: bool = False):
         if self.previous is not None and self.action_logic is not None:
             if self.previous.action == action:
                 self.action = action
@@ -126,6 +126,9 @@ class Strategy(ABC):
                         self.action = action
         else:
             self.action = action
+
+        if logic_only:
+            return
 
         match self.action:
             case Action.BUY:
@@ -370,7 +373,7 @@ class InvertingStrategy(Strategy):
 
     def forward(self, ohlcv: OHLCV):
         super().forward(ohlcv)
-        self._apply_action(ohlcv, Action.PASS)
+        self._apply_action(ohlcv, Action.PASS, logic_only=True)
         if self.indicator is not None:
             processed_equity = self.indicator.forward((0, 0, 0, self.equity, 0))
         else:
@@ -388,9 +391,6 @@ class InvertingStrategy(Strategy):
             self._invert = not self._invert
         action = Action.PASS
         if self._invert:
-            if self.action == Action.BUY or self.action == Action.SELL:
-                self._in_trade = False
-                self.trades.pop()
             if self.action == Action.BUY:
                 action = Action.SELL
             elif self.action == Action.SELL:
