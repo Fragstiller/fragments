@@ -49,7 +49,7 @@ class Trade:
                 ) - self.value
             case TradeDirection.SHORT:
                 self.profit = -(
-                    (self.value + self.profit) * (ohlcv[3] / self._prev_ohlcv[3])
+                    (self.value - self.profit) * (ohlcv[3] / self._prev_ohlcv[3])
                     - self.value
                 )
         self._prev_ohlcv = ohlcv
