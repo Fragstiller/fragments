@@ -29,11 +29,14 @@ class TradeDirection(Enum):
 class Trade:
     direction: TradeDirection
     value: float
+    iteration: int = field(default=0)
     profit: float = field(init=False, default=0.0)
     liquidation: bool = field(init=False, default=False)
+    duration: int = field(init=False, default=0)
     _prev_ohlcv: OHLCV | None = field(init=False, default=None)
 
     def forward(self, ohlcv: OHLCV):
+        self.duration += 1
         if self.liquidation:
             return
         if self._prev_ohlcv is None:
@@ -61,6 +64,7 @@ class Strategy(ABC):
     action: Action
     action_logic: Optional[ParamCell[ActionLogic]]
     trades: list[Trade]
+    iteration = 0
     equity: float = 100.0
     _in_trade: bool = False
 
@@ -78,6 +82,7 @@ class Strategy(ABC):
             self.previous = None
 
     def forward(self, ohlcv: OHLCV):
+        self.iteration += 1
         if self.previous is not None:
             self.previous.forward(ohlcv)
 
@@ -97,6 +102,7 @@ class Strategy(ABC):
         if self.previous is not None:
             self.previous.reset()
         self.trades = list()
+        self.iteration = 0
         self.equity = 100.0
         self._in_trade = False
 
@@ -127,14 +133,18 @@ class Strategy(ABC):
                     or self.trades[-1].direction == TradeDirection.SHORT
                 ):
                     self._in_trade = True
-                    self.trades.append(Trade(TradeDirection.LONG, self.equity))
+                    self.trades.append(
+                        Trade(TradeDirection.LONG, self.equity, self.iteration)
+                    )
             case Action.SELL:
                 if (
                     self._in_trade == False
                     or self.trades[-1].direction == TradeDirection.LONG
                 ):
                     self._in_trade = True
-                    self.trades.append(Trade(TradeDirection.SHORT, self.equity))
+                    self.trades.append(
+                        Trade(TradeDirection.SHORT, self.equity, self.iteration)
+                    )
             case Action.CANCEL:
                 self._in_trade = False
         if self._in_trade:
