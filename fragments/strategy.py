@@ -61,6 +61,7 @@ class Strategy(ABC):
     action: Action
     action_logic: Optional[ParamCell[ActionLogic]]
     trades: list[Trade]
+    equity: float = 100.0
     _in_trade: bool = False
 
     def __init__(
@@ -115,6 +116,9 @@ class Strategy(ABC):
                         self.action = action
         else:
             self.action = action
+
+        if self.action != Action.PASS and len(self.trades) != 0:
+            self.equity += self.trades[-1].profit
         match self.action:
             case Action.BUY:
                 if (
@@ -122,14 +126,14 @@ class Strategy(ABC):
                     or self.trades[-1].direction == TradeDirection.SHORT
                 ):
                     self._in_trade = True
-                    self.trades.append(Trade(TradeDirection.LONG, 100.0))
+                    self.trades.append(Trade(TradeDirection.LONG, self.equity))
             case Action.SELL:
                 if (
                     self._in_trade == False
                     or self.trades[-1].direction == TradeDirection.LONG
                 ):
                     self._in_trade = True
-                    self.trades.append(Trade(TradeDirection.SHORT, 100.0))
+                    self.trades.append(Trade(TradeDirection.SHORT, self.equity))
             case Action.CANCEL:
                 self._in_trade = False
         if self._in_trade:
