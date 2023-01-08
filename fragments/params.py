@@ -11,6 +11,12 @@ class ParamCell(Generic[T]):
     bounds: tuple[int, int] | list[Enum]
     value: T
 
+    def __eq__(self, other):
+        raise TypeError("comparing against ParamCell is forbidden")
+
+    def __ne__(self, other):
+        raise TypeError("comparing against ParamCell is forbidden")
+
 
 class ParamStorage:
     cells: list[ParamCell[int | Enum]]

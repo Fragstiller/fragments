@@ -253,7 +253,7 @@ class LimiterStrategy(Strategy):
                     self.limiter_multiplier.value / 100
                 )
             if (
-                self.limiter_type == LimiterType.StopLoss
+                self.limiter_type.value == LimiterType.StopLoss
                 and self.trades[-1].profit <= -self._limiter_threshold
             ):
                 action = Action.CANCEL
@@ -324,7 +324,7 @@ class CrossoverStrategy(Strategy):
                     and self.crossover_direction.value
                     in [CrossoverDirection.UP, CrossoverDirection.BOTH]
                 ):
-                    if self.crossover_handling == CrossoverHandling.REGULAR:
+                    if self.crossover_handling.value == CrossoverHandling.REGULAR:
                         action = Action.BUY
                     else:
                         action = Action.SELL
@@ -334,7 +334,7 @@ class CrossoverStrategy(Strategy):
                     and self.crossover_direction.value
                     in [CrossoverDirection.DOWN, CrossoverDirection.BOTH]
                 ):
-                    if self.crossover_handling == CrossoverHandling.REGULAR:
+                    if self.crossover_handling.value == CrossoverHandling.REGULAR:
                         action = Action.SELL
                     else:
                         action = Action.BUY
