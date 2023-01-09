@@ -36,12 +36,12 @@ def plot(strategy: Strategy, ohlcv_list: list[OHLCV]):
     for trade in strategy.trades:
         match trade.direction:
             case TradeDirection.LONG:
-                trades_long.append(trade.iteration)
+                trades_long.append(trade.iteration - 1)
             case TradeDirection.SHORT:
-                trades_short.append(trade.iteration)
+                trades_short.append(trade.iteration - 1)
         if trade.profit >= 0:
             ax2.plot(
-                (i := [trade.iteration, trade.iteration + trade.duration - 2]),
+                (i := [trade.iteration - 1, trade.iteration + trade.duration - 2]),
                 ohlcv[:, 3][np.array(i)],
                 c="limegreen",
                 lw=1,
@@ -49,7 +49,7 @@ def plot(strategy: Strategy, ohlcv_list: list[OHLCV]):
             )
         else:
             ax2.plot(
-                (i := [trade.iteration, trade.iteration + trade.duration - 2]),
+                (i := [trade.iteration - 1, trade.iteration + trade.duration - 2]),
                 ohlcv[:, 3][np.array(i)],
                 c="firebrick",
                 lw=1,
