@@ -9,6 +9,10 @@ def total_profit(strategy: Strategy) -> float:
     return sum([trade.profit for trade in strategy.trades])
 
 
+def equity(strategy: Strategy) -> float:
+    return strategy.equity
+
+
 def plot(strategy: Strategy, ohlcv_list: list[OHLCV]):
     plt.style.use("fast")
     fig, (ax1, ax2) = plt.subplots(
