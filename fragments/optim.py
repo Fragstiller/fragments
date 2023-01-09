@@ -40,4 +40,5 @@ def optimize(
         )
     if results is None:
         raise RuntimeError("skopt.gp_minimize didn't return a result")
+    strategy.update_and_forward_all(results.x, ohlcv_list)
     return results
