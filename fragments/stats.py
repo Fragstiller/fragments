@@ -1,6 +1,5 @@
 from fragments.strategy import Strategy, TradeDirection
 from fragments.indicators import OHLCV
-from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -11,6 +10,21 @@ def total_profit(strategy: Strategy) -> float:
 
 def equity(strategy: Strategy) -> float:
     return strategy.equity
+
+
+def sqn(strategy: Strategy) -> float:
+    profits = np.array([trade.profit for trade in strategy.trades])
+    profits = profits[profits != 0]
+    avg_loss = np.abs(np.average(profits[profits < 0]))
+    r_multiples = profits / avg_loss
+    r_expectancy = np.average(r_multiples)
+    r_multiples_std = np.std(r_multiples)
+    n_trades = profits.size
+    if n_trades < 100:
+        sqn = (r_expectancy / r_multiples_std) * np.sqrt(n_trades)
+    else:
+        sqn = (r_expectancy / r_multiples_std) * 10 * np.sqrt(n_trades)
+    return sqn
 
 
 def plot(strategy: Strategy, ohlcv_list: list[OHLCV]):
