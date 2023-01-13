@@ -23,5 +23,7 @@ class TestOptim(unittest.TestCase):
             ohlcv_list = pkl.load(f)
 
         self.assertAlmostEqual(
-            optimize(strategies[-1], total_profit, ohlcv_list, 42).fun, 0.0250, 4
+            optimize(strategies[-1], total_profit, ohlcv_list, random_state=42).fun,
+            0.0250,
+            4,
         )

@@ -24,7 +24,7 @@ def optimize(
     strategy: Strategy,
     func: Callable[[Strategy], float],
     ohlcv_list: list[OHLCV],
-    random_state: Optional[int] = None,
+    **kwargs
 ) -> OptimizeResult:
     strategy.forward_all(ohlcv_list)
     strategy.reset()
@@ -36,7 +36,7 @@ def optimize(
         results = skopt.gp_minimize(
             optim_func,
             convert_cell_bounds_skopt(strategy.param_storage.get_cell_bounds()),
-            random_state=random_state,
+            **kwargs
         )
     if results is None:
         raise RuntimeError("skopt.gp_minimize didn't return a result")
