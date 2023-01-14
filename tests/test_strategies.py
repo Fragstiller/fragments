@@ -30,6 +30,8 @@ class TestStrategies(unittest.TestCase):
         cast(SMA, strategy.first_indicator).period.value = 2
         cast(SMA, strategy.second_indicator).period.value = 3
 
+        strategy.reset()
+
         strategy.forward((0, 0, 0, 1, 0))
         self.assertEqual(len(strategy.trades), 0)
         strategy.forward((0, 0, 0, 1, 0))
@@ -52,6 +54,8 @@ class TestStrategies(unittest.TestCase):
             LimiterStrategy(ATR(param_storage), param_storage, strategies[0])
         )
         strategies[1].limiter_type.value = LimiterType.TakeProfit
+
+        strategies[1].reset()
 
         strategies[1].forward((0, 0, 0, 1, 0))
         strategies[1].forward((0, 0, 0, 2, 0))
@@ -79,6 +83,8 @@ class TestStrategies(unittest.TestCase):
         cast(RSI, strategies[1].indicator).period.value = 15
 
         strategies.append(InvertingStrategy(param_storage, previous=strategies[1]))
+
+        strategies[2].reset()
 
         strategies[2].forward((0, 0, 0, 1, 0))
         strategies[2].forward((0, 0, 0, 1, 0))
@@ -127,6 +133,8 @@ class TestStrategies(unittest.TestCase):
         cast(RSI, strategies[3].indicator).period.value = 5
         strategies[3].condition_type.value = ConditionType.MORE_THAN
         strategies[3].on_condition.value = Action.BUY
+
+        strategies[3].reset()
 
         strategies[3].forward((0, 0, 0, 1, 0))
         strategies[3].forward((0, 0, 0, 1, 0))

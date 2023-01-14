@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 from dataclasses import dataclass, field
+from collections import deque
 from enum import Enum
 from abc import ABC
 from fragments.params import ParamCell, ParamStorage
@@ -63,18 +64,18 @@ class Strategy(ABC):
     previous: Optional[Strategy]
     action: Action
     action_logic: Optional[ParamCell[ActionLogic]]
-    trades: list[Trade]
-    iteration = 0
+    trades: deque[Trade]
+    iteration: int = 0
     equity: float = 100.0
-    hist_equity: list[float]
+    hist_equity: deque[float]
     _in_trade: bool = False
 
     def __init__(
         self, param_storage: ParamStorage, previous: Optional[Strategy] = None
     ):
         self.param_storage = param_storage
-        self.trades = list()
-        self.hist_equity = list()
+        self.trades = deque()
+        self.hist_equity = deque()
         if previous is not None:
             self.previous = previous
             self.action_logic = self.param_storage.create_default_categorical_cell(
@@ -103,10 +104,10 @@ class Strategy(ABC):
     def reset(self):
         if self.previous is not None:
             self.previous.reset()
-        self.trades = list()
+        self.trades = deque()
         self.iteration = 0
         self.equity = 100.0
-        self.hist_equity = list()
+        self.hist_equity = deque()
         self._in_trade = False
 
     def _apply_action(self, ohlcv: OHLCV, action: Action, logic_only: bool = False):
@@ -114,7 +115,7 @@ class Strategy(ABC):
             if self.previous.action == action:
                 self.action = action
             else:
-                self.action = action.PASS
+                self.action = Action.PASS
             match self.action_logic.value:
                 case ActionLogic.OR:
                     if action == Action.PASS:

@@ -1,4 +1,5 @@
 import unittest
+from collections import deque
 from fragments.params import ParamStorage
 from fragments.strategy import (
     Strategy,
@@ -31,7 +32,7 @@ class TestStats(unittest.TestCase):
         strategy = Strategy(param_storage)
 
         def create_trades(*args):
-            trades = []
+            trades = deque()
             for profit in args:
                 trade = Trade(TradeDirection.LONG, 100)
                 trade.profit = profit
