@@ -53,7 +53,7 @@ class TestStrategies(unittest.TestCase):
         strategies.append(
             LimiterStrategy(ATR(param_storage), param_storage, strategies[0])
         )
-        strategies[1].limiter_type.value = LimiterType.TakeProfit
+        strategies[1].limiter_type.value = LimiterType.TAKE_PROFIT
 
         strategies[1].reset()
 

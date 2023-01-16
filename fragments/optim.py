@@ -3,9 +3,9 @@ import warnings
 from skopt.space.space import Categorical
 from scipy.optimize import OptimizeResult
 from enum import Enum
-from typing import Callable, Optional
+from typing import Callable
 from fragments.strategy import Strategy
-from fragments.indicators import OHLCV
+from fragments.indicators import OHLCV, Indicator
 
 
 def convert_cell_bounds_skopt(
@@ -26,6 +26,7 @@ def optimize(
     ohlcv_list: list[OHLCV],
     **kwargs
 ) -> OptimizeResult:
+    Indicator.enable_precalculation(ohlcv_list)
     strategy.forward_all(ohlcv_list)
     strategy.reset()
     optim_func: Callable[[list[int | Enum]], float] = lambda values: 1 / max(
@@ -41,4 +42,5 @@ def optimize(
     if results is None:
         raise RuntimeError("skopt.gp_minimize didn't return a result")
     strategy.update_and_forward_all(results.x, ohlcv_list)
+    Indicator.disable_precalculation()
     return results

@@ -4,5 +4,12 @@ version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = ["numpy", "scipy", "scikit-optimize", "matplotlib", "talipp"]
 
+[build-system]
+requires = ["setuptools", "cython"]
+
 [tool.setuptools]
 packages = ["fragments"]
+py-modules = ["_fragments_build"]
+
+[tool.setuptools.cmdclass]
+build_py = "_fragments_build.build_py"

@@ -1,5 +1,8 @@
 __pycache__/
 .vscode/
 *.egg-info/
+*.c
+*.html
+*.pyd
 *.pkl
 !data/GOOG.pkl

@@ -2,26 +2,27 @@ from __future__ import annotations
 from typing import Optional
 from dataclasses import dataclass, field
 from collections import deque
-from enum import Enum
+from enum import Enum, IntEnum
 from abc import ABC
+from fragments import cproc
 from fragments.params import ParamCell, ParamStorage
 from fragments.indicators import Indicator, OHLCV
 
 
-class Action(Enum):
+class Action(IntEnum):
     BUY = 1
     SELL = 2
     CANCEL = 3
     PASS = 4
 
 
-class ActionLogic(Enum):
+class ActionLogic(IntEnum):
     AND = 1
     OR = 2
     IGNORE = 3
 
 
-class TradeDirection(Enum):
+class TradeDirection(IntEnum):
     LONG = 1
     SHORT = 2
 
@@ -83,6 +84,7 @@ class Strategy(ABC):
             )
         else:
             self.previous = None
+            self.action_logic = None
 
     def forward(self, ohlcv: OHLCV):
         self.iteration += 1
@@ -110,55 +112,11 @@ class Strategy(ABC):
         self.hist_equity = deque()
         self._in_trade = False
 
-    def _apply_action(self, ohlcv: OHLCV, action: Action, logic_only: bool = False):
-        if self.previous is not None and self.action_logic is not None:
-            if self.previous.action == action:
-                self.action = action
-            else:
-                self.action = Action.PASS
-            match self.action_logic.value:
-                case ActionLogic.OR:
-                    if action == Action.PASS:
-                        self.action = self.previous.action
-                case ActionLogic.IGNORE:
-                    if action == Action.PASS:
-                        self.action = self.previous.action
-                    else:
-                        self.action = action
-        else:
-            self.action = action
-
-        if logic_only:
-            return
-
-        match self.action:
-            case Action.BUY:
-                if (
-                    self._in_trade == False
-                    or self.trades[-1].direction == TradeDirection.SHORT
-                ):
-                    self._in_trade = True
-                    self.trades.append(
-                        Trade(TradeDirection.LONG, self.equity, self.iteration)
-                    )
-            case Action.SELL:
-                if (
-                    self._in_trade == False
-                    or self.trades[-1].direction == TradeDirection.LONG
-                ):
-                    self._in_trade = True
-                    self.trades.append(
-                        Trade(TradeDirection.SHORT, self.equity, self.iteration)
-                    )
-            case Action.CANCEL:
-                self._in_trade = False
-        if self._in_trade:
-            self.trades[-1].forward(ohlcv)
-            self.equity = self.trades[-1].value + self.trades[-1].profit
-        self.hist_equity.append(self.equity)
+    def _new_trade(self, direction: TradeDirection):
+        self.trades.append(Trade(direction, self.equity, self.iteration))
 
 
-class ConditionType(Enum):
+class ConditionType(IntEnum):
     LESS_THAN = 1
     MORE_THAN = 2
 
@@ -168,6 +126,7 @@ class ConditionalStrategy(Strategy):
     condition_threshold: ParamCell[int]
     condition_type: ParamCell[ConditionType]
     on_condition: ParamCell[Action]
+    _freeze_bounds: bool
 
     def __init__(
         self,
@@ -182,40 +141,25 @@ class ConditionalStrategy(Strategy):
             ConditionType
         )
         self.on_condition = self.param_storage.create_default_categorical_cell(Action)
+        self._freeze_bounds = False
 
     def reset(self):
         super().reset()
         self.indicator.reset()
 
+    def forward_all(self, ohlcv_list: list[OHLCV]):
+        for ohlcv in ohlcv_list:
+            self.forward(ohlcv)
+        self._freeze_bounds = True
+
     def forward(self, ohlcv: OHLCV):
         super().forward(ohlcv)
-        action = Action.PASS
-        indicator_value = self.indicator.forward(ohlcv)
-        if indicator_value is not None:
-            assert isinstance(self.condition_threshold.bounds, tuple)
-            if int(indicator_value) < self.condition_threshold.bounds[0]:
-                self.condition_threshold.bounds = (
-                    int(indicator_value),
-                    self.condition_threshold.bounds[1],
-                )
-            elif int(indicator_value) > self.condition_threshold.bounds[1]:
-                self.condition_threshold.bounds = (
-                    self.condition_threshold.bounds[0],
-                    int(indicator_value),
-                )
-            match self.condition_type.value:
-                case ConditionType.LESS_THAN:
-                    if indicator_value < self.condition_threshold.value:
-                        action = self.on_condition.value
-                case ConditionType.MORE_THAN:
-                    if indicator_value >= self.condition_threshold.value:
-                        action = self.on_condition.value
-        self._apply_action(ohlcv, action)
+        cproc.forward_conditional(self, ohlcv, self._freeze_bounds)
 
 
-class LimiterType(Enum):
-    StopLoss = 1
-    TakeProfit = 2
+class LimiterType(IntEnum):
+    STOP_LOSS = 1
+    TAKE_PROFIT = 2
 
 
 class LimiterStrategy(Strategy):
@@ -246,30 +190,16 @@ class LimiterStrategy(Strategy):
 
     def forward(self, ohlcv: OHLCV):
         super().forward(ohlcv)
-        action = Action.PASS
-        indicator_value = self.indicator.forward(ohlcv)
-        if len(self.trades) != 0:
-            if self.trades[-1].profit == 0 and indicator_value is not None:
-                self._limiter_threshold = indicator_value * (
-                    self.limiter_multiplier.value / 100
-                )
-            if (
-                self.limiter_type.value == LimiterType.StopLoss
-                and self.trades[-1].profit <= -self._limiter_threshold
-            ):
-                action = Action.CANCEL
-            elif self.trades[-1].profit > self._limiter_threshold:
-                action = Action.CANCEL
-        self._apply_action(ohlcv, action)
+        cproc.forward_limiter(self, ohlcv)
 
 
-class CrossoverDirection(Enum):
+class CrossoverDirection(IntEnum):
     UP = 1
     DOWN = 2
     BOTH = 3
 
 
-class CrossoverHandling(Enum):
+class CrossoverHandling(IntEnum):
     REGULAR = 1
     INVERTED = 2
 
@@ -308,38 +238,7 @@ class CrossoverStrategy(Strategy):
 
     def forward(self, ohlcv: OHLCV):
         super().forward(ohlcv)
-        action = Action.PASS
-        first_value = self.first_indicator.forward(ohlcv)
-        second_value = self.second_indicator.forward(ohlcv)
-        if first_value is not None and second_value is not None:
-            if self._prev_first_value is None or self._prev_second_value is None:
-                self._prev_first_value = first_value
-                self._prev_second_value = second_value
-            elif (
-                self._prev_first_value is not None
-                and self._prev_second_value is not None
-            ):
-                if (
-                    self._prev_first_value <= self._prev_second_value
-                    and first_value > second_value
-                    and self.crossover_direction.value
-                    in [CrossoverDirection.UP, CrossoverDirection.BOTH]
-                ):
-                    if self.crossover_handling.value == CrossoverHandling.REGULAR:
-                        action = Action.BUY
-                    else:
-                        action = Action.SELL
-                elif (
-                    self._prev_first_value >= self._prev_second_value
-                    and first_value < second_value
-                    and self.crossover_direction.value
-                    in [CrossoverDirection.DOWN, CrossoverDirection.BOTH]
-                ):
-                    if self.crossover_handling.value == CrossoverHandling.REGULAR:
-                        action = Action.SELL
-                    else:
-                        action = Action.BUY
-        self._apply_action(ohlcv, action)
+        cproc.forward_crossover(self, ohlcv)
 
 
 class InvertingStrategy(Strategy):
@@ -374,26 +273,4 @@ class InvertingStrategy(Strategy):
 
     def forward(self, ohlcv: OHLCV):
         super().forward(ohlcv)
-        self._apply_action(ohlcv, Action.PASS, logic_only=True)
-        if self.indicator is not None:
-            processed_equity = self.indicator.forward((0, 0, 0, self.equity, 0))
-        else:
-            processed_equity = self.equity
-        if processed_equity is not None:
-            if processed_equity > self._peak_equity:
-                self._peak_equity = self.equity
-                self._drawdown_duration = 0
-            else:
-                self._drawdown_duration += 1
-        if (
-            self._drawdown_duration
-            > self.invert_drawdown_duration.value * self.duration_multiplier.value
-        ):
-            self._invert = not self._invert
-        action = Action.PASS
-        if self._invert:
-            if self.action == Action.BUY:
-                action = Action.SELL
-            elif self.action == Action.SELL:
-                action = Action.BUY
-        self._apply_action(ohlcv, action)
+        cproc.forward_inverting(self, ohlcv)
