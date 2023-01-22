@@ -39,30 +39,32 @@ def apply_strategy_action(self, ohlcv, int action, int logic_only = 0):
         result_action = action
     self.action = result_action
 
-    if logic_only:
+    if logic_only or self.equity < 0.01:
         return
 
     cdef int in_trade = self._in_trade
 
     if result_action == Action.BUY:
-        if (
-            not in_trade
-            or self.trades[-1].direction == TradeDirection.SHORT
-        ):
+        if not in_trade:
             self._in_trade = True
             self._new_trade(TradeDirection.LONG)
+        elif self._in_trade and self.trades[-1].direction == TradeDirection.SHORT:
+            self.trades[-1].forward(ohlcv)
+            self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit
+            self._new_trade(TradeDirection.LONG)
     elif result_action == Action.SELL:
-        if (
-            not in_trade
-            or self.trades[-1].direction == TradeDirection.LONG
-        ):
+        if not in_trade:
             self._in_trade = True
+            self._new_trade(TradeDirection.SHORT)
+        elif self._in_trade and self.trades[-1].direction == TradeDirection.LONG:
+            self.trades[-1].forward(ohlcv)
+            self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit
             self._new_trade(TradeDirection.SHORT)
     elif result_action == Action.CANCEL:
         self._in_trade = False
     if self._in_trade:
         self.trades[-1].forward(ohlcv)
-        self.equity = self.trades[-1].value + self.trades[-1].profit
+        self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit
     self.hist_equity.append(self.equity)
 
 
@@ -128,19 +130,13 @@ def forward_limiter(self, ohlcv):
     apply_strategy_action(self, ohlcv, action)
 
 
-cpdef enum CrossoverDirection:
-    UP = 1
-    DOWN = 2
-    BOTH = 3
-
-
 cpdef enum CrossoverHandling:
     REGULAR = 1
     INVERTED = 2
 
 
 def forward_crossover(self, ohlcv):
-    cdef int crossover_direction, action
+    cdef int action
     cdef float first_value, second_value, prev_first_value, prev_second_value
     action = Action.PASS
     first_value_unknown = self.first_indicator.forward(ohlcv)
@@ -157,11 +153,9 @@ def forward_crossover(self, ohlcv):
         ):
             prev_first_value = self._prev_first_value
             prev_second_value = self._prev_second_value
-            crossover_direction = self.crossover_direction.value
             if (
                 prev_first_value <= prev_second_value
                 and first_value > second_value
-                and (crossover_direction == CrossoverDirection.UP or crossover_direction == CrossoverDirection.BOTH)
             ):
                 if self.crossover_handling.value == CrossoverHandling.REGULAR:
                     action = Action.BUY
@@ -170,12 +164,13 @@ def forward_crossover(self, ohlcv):
             elif (
                 prev_first_value >= prev_second_value
                 and first_value < second_value
-                and (crossover_direction == CrossoverDirection.DOWN or crossover_direction == CrossoverDirection.BOTH)
             ):
                 if self.crossover_handling.value == CrossoverHandling.REGULAR:
                     action = Action.SELL
                 else:
                     action = Action.BUY
+            self._prev_first_value = first_value
+            self._prev_second_value = second_value
     apply_strategy_action(self, ohlcv, action)
 
 
@@ -188,15 +183,17 @@ def forward_inverting(self, ohlcv):
         processed_equity = self.equity
     if processed_equity is not None:
         if processed_equity > self._peak_equity:
-            self._peak_equity = self.equity
+            self._peak_equity = processed_equity
             self._drawdown_duration = 0
         else:
             self._drawdown_duration += 1
     if (
         self._drawdown_duration
-        > self.invert_drawdown_duration.value * self.duration_multiplier.value
+        > self.invert_drawdown_duration.value * self._duration_multiplier
     ):
         self._invert = not self._invert
+        self._peak_equity = processed_equity
+        self._drawdown_duration = 0
     action = Action.PASS
     current_action = self.action
     if self._invert:
