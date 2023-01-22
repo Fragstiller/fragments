@@ -1,7 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
 from typing import TypeVar, Generic, Type, Optional
-import numpy
 
 T = TypeVar("T")
 
@@ -33,12 +32,6 @@ class ParamStorage:
                 f"length of list of values is {len(values)}, should be {len(self.cells)}"
             )
         for cell, value in zip(self.cells, values):
-            if isinstance(value, numpy.signedinteger):
-                value = int(value)
-            if not isinstance(value, type(cell.value)):
-                raise TypeError(
-                    f"cannot apply value type {type(value)} to cell type {type(cell.value)}"
-                )
             cell.value = value
 
     def create_cell(
