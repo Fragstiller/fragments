@@ -42,50 +42,43 @@ def plot(strategy: Strategy, ohlcv_list: list[OHLCV]):
             f"amount of iterations in strategy must match length of OHLCV list: {strategy.iteration} != {len(ohlcv_list)}"
         )
 
-    ax1.set_ylabel("Equity (%)")
-    ax1.plot(strategy.hist_equity, c="0.2", lw=1)
+    ax1.set_ylabel("Equity ($)")
+    substrategy = strategy
+    depth = 0
+    while True:
+        ax1.plot(
+            substrategy.hist_equity, c="0.2", lw=1, alpha=max(0, 1.0 - (0.15 * depth))
+        )
+        if substrategy.previous is None:
+            break
+        depth += 1
+        substrategy = substrategy.previous
 
     ax2.set_ylabel("Asset Value ($)")
     ax2.set_xlabel("Iteration")
     ax2.plot(ohlcv[:, 3], c="0.2", lw=1)
 
-    trades_long = []
-    trades_short = []
-    for trade in strategy.trades:
-        match trade.direction:
-            case TradeDirection.LONG:
-                trades_long.append(trade.iteration - 1)
-            case TradeDirection.SHORT:
-                trades_short.append(trade.iteration - 1)
-        if trade.profit >= 0:
-            ax2.plot(
-                (i := [trade.iteration - 1, trade.iteration + trade.duration - 2]),
-                ohlcv[:, 3][np.array(i)],
-                c="limegreen",
-                lw=1,
-                ls="--",
+    if len(strategy.trades) < 100:
+        trades_won = []
+        trades_lost = []
+        for trade in strategy.trades:
+            if trade.profit >= 0:
+                trades_won.append(trade.iteration - 1)
+            else:
+                trades_lost.append(trade.iteration - 1)
+        if len(trades_lost) != 0:
+            ax2.scatter(
+                np.array(trades_lost),
+                ohlcv[:, 3][np.array(trades_lost)],
+                c="red",
+                s=2.5,
+                zorder=10,
             )
-        else:
-            ax2.plot(
-                (i := [trade.iteration - 1, trade.iteration + trade.duration - 2]),
-                ohlcv[:, 3][np.array(i)],
-                c="firebrick",
-                lw=1,
-                ls="--",
+        if len(trades_won) != 0:
+            ax2.scatter(
+                np.array(trades_won),
+                ohlcv[:, 3][np.array(trades_won)],
+                c="lime",
+                s=2.5,
+                zorder=10,
             )
-    if len(trades_short) != 0:
-        ax2.scatter(
-            np.array(trades_short),
-            ohlcv[:, 3][np.array(trades_short)],
-            c="red",
-            s=2.5,
-            zorder=10,
-        )
-    if len(trades_long) != 0:
-        ax2.scatter(
-            np.array(trades_long),
-            ohlcv[:, 3][np.array(trades_long)],
-            c="lime",
-            s=2.5,
-            zorder=10,
-        )
