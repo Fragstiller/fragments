@@ -58,7 +58,7 @@ class RSI(Indicator):
 
     def __init__(self, param_storage: ParamStorage):
         super().__init__(param_storage)
-        self.period = self.param_storage.create_cell((2, 240))
+        self.period = self.param_storage.create_cell((2, 20))
         self.reset()
 
     def reset(self):
@@ -100,7 +100,7 @@ class ATR(Indicator):
 
     def __init__(self, param_storage: ParamStorage):
         super().__init__(param_storage)
-        self.period = self.param_storage.create_cell((2, 240))
+        self.period = self.param_storage.create_cell((5, 50))
         self.reset()
 
     def reset(self):
@@ -145,7 +145,7 @@ class SMA(Indicator):
 
     def __init__(self, param_storage: ParamStorage):
         super().__init__(param_storage)
-        self.period = self.param_storage.create_cell((2, 240))
+        self.period = self.param_storage.create_cell((2, 120))
         self.reset()
 
     def reset(self):
