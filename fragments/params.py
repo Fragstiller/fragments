@@ -1,3 +1,4 @@
+from __future__ import annotations
 from enum import Enum
 from dataclasses import dataclass
 from typing import TypeVar, Generic, Type, Optional
@@ -19,9 +20,16 @@ class ParamCell(Generic[T]):
 
 class ParamStorage:
     cells: list[ParamCell[int | Enum]]
+    global_storage: ParamStorage
+    global_storage_active: bool = False
 
     def __init__(self):
         self.cells = list()
+
+    @classmethod
+    def new_global(cls):
+        cls.global_storage = ParamStorage()
+        cls.global_storage_active = True
 
     def get_cell_bounds(self) -> list[tuple[int, int] | list[Enum]]:
         return [cell.bounds for cell in self.cells]

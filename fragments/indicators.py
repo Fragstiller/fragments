@@ -20,8 +20,13 @@ class Indicator(ABC):
     _precalc_ohlcv: np.ndarray
     _precalc_result: np.ndarray
 
-    def __init__(self, param_storage: ParamStorage):
-        self.param_storage = param_storage
+    def __init__(self, param_storage: Optional[ParamStorage] = None):
+        if param_storage is None:
+            if not ParamStorage.global_storage_active:
+                ParamStorage.new_global()
+            self.param_storage = ParamStorage.global_storage
+        else:
+            self.param_storage = param_storage
         if self._precalc:
             self._precalc_iteraion = 0
         self._active = False
@@ -56,7 +61,7 @@ class RSI(Indicator):
     wrapped_indicator: talipp.indicators.RSI
     ohlcv_deque: deque[OHLCV]
 
-    def __init__(self, param_storage: ParamStorage):
+    def __init__(self, param_storage: Optional[ParamStorage] = None):
         super().__init__(param_storage)
         self.period = self.param_storage.create_cell((2, 20))
         self.reset()
@@ -98,7 +103,7 @@ class ATR(Indicator):
     period: ParamCell[int]
     wrapped_indicator: talipp.indicators.ATR
 
-    def __init__(self, param_storage: ParamStorage):
+    def __init__(self, param_storage: Optional[ParamStorage] = None):
         super().__init__(param_storage)
         self.period = self.param_storage.create_cell((5, 50))
         self.reset()
@@ -143,7 +148,7 @@ class SMA(Indicator):
     period: ParamCell[int]
     wrapped_indicator: talipp.indicators.SMA
 
-    def __init__(self, param_storage: ParamStorage):
+    def __init__(self, param_storage: Optional[ParamStorage] = None):
         super().__init__(param_storage)
         self.period = self.param_storage.create_cell((2, 120))
         self.reset()

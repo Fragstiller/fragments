@@ -32,7 +32,7 @@ class TestStats(unittest.TestCase):
         strategy = Strategy(param_storage)
 
         def create_trades(*args):
-            trades = deque()
+            trades = list()
             for profit in args:
                 trade = Trade(TradeDirection.LONG, 100)
                 trade.profit = profit

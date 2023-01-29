@@ -81,9 +81,16 @@ class Strategy(ABC):
         cls._fee = fee
 
     def __init__(
-        self, param_storage: ParamStorage, previous: Optional[Strategy] = None
+        self,
+        param_storage: Optional[ParamStorage] = None,
+        previous: Optional[Strategy] = None,
     ):
-        self.param_storage = param_storage
+        if param_storage is None:
+            if not ParamStorage.global_storage_active:
+                ParamStorage.new_global()
+            self.param_storage = ParamStorage.global_storage
+        else:
+            self.param_storage = param_storage
         self.trades = list()
         self.iteration = 0
         self.equity = 100.0
@@ -145,7 +152,7 @@ class ConditionalStrategy(Strategy):
     def __init__(
         self,
         indicator: Indicator,
-        param_storage: ParamStorage,
+        param_storage: Optional[ParamStorage] = None,
         previous: Optional[Strategy] = None,
     ):
         super().__init__(param_storage, previous)
@@ -186,7 +193,7 @@ class LimiterStrategy(Strategy):
     def __init__(
         self,
         indicator: Indicator,
-        param_storage: ParamStorage,
+        param_storage: Optional[ParamStorage] = None,
         previous: Optional[Strategy] = None,
     ):
         super().__init__(param_storage, previous)
@@ -224,7 +231,7 @@ class CrossoverStrategy(Strategy):
         self,
         first_indicator: Indicator,
         second_indicator: Indicator,
-        param_storage: ParamStorage,
+        param_storage: Optional[ParamStorage] = None,
         previous: Optional[Strategy] = None,
     ):
         super().__init__(param_storage, previous)
@@ -263,8 +270,8 @@ class InvertingStrategy(Strategy):
 
     def __init__(
         self,
-        param_storage: ParamStorage,
         indicator: Optional[Indicator] = None,
+        param_storage: Optional[ParamStorage] = None,
         previous: Optional[Strategy] = None,
     ):
         super().__init__(param_storage, previous)
