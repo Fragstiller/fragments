@@ -98,7 +98,9 @@ class TestStrategies(unittest.TestCase):
         strategies[1].on_condition.value = Action.BUY
         cast(RSI, strategies[1].indicator).period.value = 15
 
-        strategies.append(InvertingStrategy(param_storage, previous=strategies[1]))
+        strategies.append(
+            InvertingStrategy(param_storage=param_storage, previous=strategies[1])
+        )
         strategies[2].invert_drawdown_duration.value = 14
 
         strategies[2].reset()

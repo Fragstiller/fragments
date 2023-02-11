@@ -15,12 +15,6 @@ class Action(IntEnum):
     PASS = 4
 
 
-class ActionLogic(IntEnum):
-    AND = 1
-    OR = 2
-    IGNORE = 3
-
-
 class TradeDirection(IntEnum):
     LONG = 1
     SHORT = 2
@@ -68,7 +62,6 @@ class Strategy(ABC):
     param_storage: ParamStorage
     previous: Optional[Strategy]
     action: Action
-    action_logic: Optional[ParamCell[ActionLogic]]
     trades: list[Trade]
     iteration: int
     equity: float
@@ -98,12 +91,8 @@ class Strategy(ABC):
         self._in_trade = False
         if previous is not None:
             self.previous = previous
-            self.action_logic = self.param_storage.create_default_categorical_cell(
-                ActionLogic
-            )
         else:
             self.previous = None
-            self.action_logic = None
 
     def forward(self, ohlcv: OHLCV):
         self.iteration += 1
@@ -142,9 +131,16 @@ class ConditionType(IntEnum):
     MORE_THAN = 2
 
 
+class ConditionLogic(IntEnum):
+    AND = 1
+    SAMEAND = 2
+    IGNORE = 3
+
+
 class ConditionalStrategy(Strategy):
     indicator: Indicator
     condition_threshold: ParamCell[int]
+    condition_logic: Optional[ParamCell[ConditionLogic]]
     condition_type: ParamCell[ConditionType]
     on_condition: ParamCell[Action]
     _freeze_bounds: bool
@@ -158,10 +154,18 @@ class ConditionalStrategy(Strategy):
         super().__init__(param_storage, previous)
         self.indicator = indicator
         self.condition_threshold = self.param_storage.create_default_numerical_cell()
+        if previous is not None:
+            self.condition_logic = self.param_storage.create_default_categorical_cell(
+                ConditionLogic
+            )
+        else:
+            self.condition_logic = None
         self.condition_type = self.param_storage.create_default_categorical_cell(
             ConditionType
         )
-        self.on_condition = self.param_storage.create_default_categorical_cell(Action)
+        self.on_condition = self.param_storage.create_cell(
+            [Action.BUY, Action.SELL, Action.CANCEL], Action.BUY
+        )
         self._freeze_bounds = False
 
     def reset(self):
@@ -202,9 +206,6 @@ class LimiterStrategy(Strategy):
         self.limiter_type = self.param_storage.create_default_categorical_cell(
             LimiterType
         )
-        if self.action_logic is not None:
-            self.action_logic.value = ActionLogic.IGNORE
-            self.action_logic.bounds = [ActionLogic.IGNORE]
 
     def reset(self):
         super().reset()
@@ -292,9 +293,6 @@ class InvertingStrategy(Strategy):
                 self._duration_multiplier = 24
             case InvertingMultiplier.MINUTES:
                 self._duration_multiplier = 1440
-        if self.action_logic is not None:
-            self.action_logic.value = ActionLogic.IGNORE
-            self.action_logic.bounds = [ActionLogic.IGNORE]
 
     def reset(self):
         super().reset()

@@ -5,36 +5,19 @@ cpdef enum Action:
     PASS = 4
 
 
-cpdef enum ActionLogic:
-    AND = 1
-    OR = 2
-    IGNORE = 3
-
-
 cpdef enum TradeDirection:
     LONG = 1
     SHORT = 2
 
 
 def apply_strategy_action(self, ohlcv, int action, int logic_only = 0):
-    cdef int previous_action, action_logic, result_action
+    cdef int action_logic, result_action
 
-    if self.previous is not None and self.action_logic is not None:
-        previous_action = self.previous.action
-        action_logic = self.action_logic.value
-        if previous_action == action:
-            result_action = action
+    if self.previous is not None:
+        if action == Action.PASS:
+            result_action = self.previous.action
         else:
-            result_action = Action.PASS
-        self.action = result_action
-        if action_logic == ActionLogic.OR:
-            if action == Action.PASS:
-                result_action = previous_action
-        elif action_logic == ActionLogic.IGNORE:
-            if action == Action.PASS:
-                result_action = previous_action
-            else:
-                result_action = action
+            result_action = action
     else:
         result_action = action
     self.action = result_action
@@ -73,8 +56,14 @@ cpdef enum ConditionType:
     MORE_THAN = 2
 
 
+cpdef enum ConditionLogic:
+    AND = 1
+    SAMEAND = 2
+    IGNORE = 3
+
+
 def forward_conditional(self, ohlcv, int freeze_bounds):
-    cdef int condition_type, action
+    cdef int condition_type, condition_logic, action
     cdef float indicator_value
     action = Action.PASS
     indicator_value_unknown = self.indicator.forward(ohlcv)
@@ -98,6 +87,13 @@ def forward_conditional(self, ohlcv, int freeze_bounds):
         elif condition_type == ConditionType.MORE_THAN:
             if indicator_value >= self.condition_threshold.value:
                 action = self.on_condition.value
+    if self.previous is not None and self.condition_logic is not None:
+        condition_logic = self.condition_logic.value
+        previous_action = self.previous.action
+        if condition_logic == ConditionLogic.AND and previous_action != action:
+            action = Action.CANCEL
+        elif condition_logic == ConditionLogic.SAMEAND and self.on_condition.value == previous_action and previous_action != action:
+            action = Action.CANCEL
     apply_strategy_action(self, ohlcv, action)
 
 
