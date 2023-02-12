@@ -19,8 +19,10 @@ class TestStrategies(unittest.TestCase):
         self.assertEqual(len(strategy.trades), 0)
         strategy.forward((0, 0, 0, 1, 0))
         self.assertEqual(len(strategy.trades), 1)
-        strategy.forward((0, 0, 0, 1, 0))
+        self.assertEqual(strategy.equity, 100.0)
+        strategy.forward((0, 0, 0, 2, 0))
         self.assertEqual(len(strategy.trades), 1)
+        self.assertEqual(strategy.equity, 200.0)
 
     def test_conditional_strategy_bounds(self):
         param_storage = ParamStorage()
@@ -49,12 +51,16 @@ class TestStrategies(unittest.TestCase):
         self.assertEqual(len(strategy.trades), 0)
         strategy.forward((0, 0, 0, 2, 0))
         self.assertEqual(len(strategy.trades), 1)
+        self.assertEqual(strategy.equity, 100.0)
         strategy.forward((0, 0, 0, 2.2, 0))
         self.assertEqual(len(strategy.trades), 1)
+        self.assertAlmostEqual(strategy.equity, 110.0, 1)
         strategy.forward((0, 0, 0, 2, 0))
         self.assertEqual(len(strategy.trades), 1)
+        self.assertAlmostEqual(strategy.equity, 100.0, 1)
         strategy.forward((0, 0, 0, 0.5, 0))
         self.assertEqual(len(strategy.trades), 2)
+        self.assertAlmostEqual(strategy.equity, 25.0, 1)
 
     def test_limiter_strategy(self):
         param_storage = ParamStorage()
@@ -81,6 +87,7 @@ class TestStrategies(unittest.TestCase):
         strategies[1].forward((0, 0, 0, 0, 0))
 
         self.assertEqual(strategies[1].trades[-1].profit, 100)
+        self.assertEqual(strategies[1].equity, 200)
 
     def test_inverting_strategy(self):
         param_storage = ParamStorage()

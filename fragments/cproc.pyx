@@ -12,6 +12,7 @@ cpdef enum TradeDirection:
 
 def apply_strategy_action(self, ohlcv, int action, int logic_only = 0):
     cdef int action_logic, result_action
+    cdef int direction_switch = 0
 
     if self.previous is not None:
         if action == Action.PASS:
@@ -34,6 +35,7 @@ def apply_strategy_action(self, ohlcv, int action, int logic_only = 0):
         elif self._in_trade and self.trades[-1].direction == TradeDirection.SHORT:
             self.trades[-1].forward(ohlcv)
             self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit
+            direction_switch = 1
             self._new_trade(TradeDirection.LONG)
     elif result_action == Action.SELL:
         if not in_trade:
@@ -42,12 +44,16 @@ def apply_strategy_action(self, ohlcv, int action, int logic_only = 0):
         elif self._in_trade and self.trades[-1].direction == TradeDirection.LONG:
             self.trades[-1].forward(ohlcv)
             self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit
+            direction_switch = 1
             self._new_trade(TradeDirection.SHORT)
     elif result_action == Action.CANCEL:
         self._in_trade = False
     if self._in_trade:
         self.trades[-1].forward(ohlcv)
-        self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit
+        if direction_switch:
+            self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit + self.trades[-2].profit
+        else:
+            self.equity = self.hist_equity[self.trades[-1].iteration - 2] + self.trades[-1].profit
     self.hist_equity.append(self.equity)
 
 
