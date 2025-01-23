@@ -67,6 +67,7 @@ class Strategy(ABC):
     equity: float
     hist_equity: list[float]
     _fee: float = 0.0
+    _last_trade_equity: float
     _in_trade: bool
 
     @classmethod
@@ -89,6 +90,7 @@ class Strategy(ABC):
         self.equity = 100.0
         self.hist_equity = list()
         self._in_trade = False
+        self._last_trade_equity = 0.0
         if previous is not None:
             self.previous = previous
         else:
@@ -121,8 +123,9 @@ class Strategy(ABC):
         self._in_trade = False
 
     def _new_trade(self, direction: TradeDirection):
+        self._last_trade_equity = self.equity
         self.trades.append(
-            Trade(direction, min(100, self.equity), self.iteration, self._fee)
+            Trade(direction, min(100, self.equity), self.iteration, Strategy._fee)
         )
 
 

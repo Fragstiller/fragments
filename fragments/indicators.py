@@ -43,7 +43,7 @@ class Indicator(ABC):
 
     def disable_precalculation_for_self(self):
         self._precalc = False
-        cls._precalc_ohlcv = None  # type: ignore
+        # cls._precalc_ohlcv = None  # type: ignore
 
     @abstractmethod
     def reset(self):

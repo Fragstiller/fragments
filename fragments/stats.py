@@ -15,7 +15,7 @@ def equity(strategy: Strategy) -> float:
 def sqn(strategy: Strategy) -> float:
     profits = np.array([trade.profit for trade in strategy.trades])
     profits = profits[profits != 0]
-    if profits.size == 0 or profits[profits > 0].size == 0:
+    if strategy.equity < 0.01 or profits.size == 0 or profits[profits > 0].size == 0:
         return 0
     if profits[profits < 0].size == 0:
         return 1.0
@@ -24,10 +24,10 @@ def sqn(strategy: Strategy) -> float:
     r_expectancy = np.average(r_multiples)
     r_multiples_std = np.std(r_multiples)
     n_trades = profits.size
-    if n_trades < 100:
-        sqn = (r_expectancy / r_multiples_std) * np.sqrt(n_trades)
-    else:
-        sqn = (r_expectancy / (r_multiples_std * (n_trades / 100))) * np.sqrt(n_trades)
+    # if n_trades < 100:
+    sqn = (r_expectancy / r_multiples_std) * np.sqrt(n_trades)
+    # else:
+    #     sqn = (r_expectancy / (r_multiples_std * (n_trades / 100))) * np.sqrt(n_trades)
     return sqn
 
 

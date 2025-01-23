@@ -33,7 +33,7 @@ class TestStrategies(unittest.TestCase):
         strategy.forward((0, 0, 0, 1, 0))
         self.assertEqual(strategy.condition_threshold.bounds, (0, 100))
 
-    def test_crossover_strategy(self):
+    def test_crossover_strategy_and_equity_calculation(self):
         param_storage = ParamStorage()
         strategy = CrossoverStrategy(
             SMA(param_storage), SMA(param_storage), param_storage
@@ -55,12 +55,19 @@ class TestStrategies(unittest.TestCase):
         strategy.forward((0, 0, 0, 2.2, 0))
         self.assertEqual(len(strategy.trades), 1)
         self.assertAlmostEqual(strategy.equity, 110.0, 1)
-        strategy.forward((0, 0, 0, 2, 0))
+        strategy.forward((0, 0, 0, 1.8, 0))
         self.assertEqual(len(strategy.trades), 1)
-        self.assertAlmostEqual(strategy.equity, 100.0, 1)
+        self.assertAlmostEqual(strategy.equity, 90.0, 1)
         strategy.forward((0, 0, 0, 0.5, 0))
         self.assertEqual(len(strategy.trades), 2)
         self.assertAlmostEqual(strategy.equity, 25.0, 1)
+        strategy.forward((0, 0, 0, 0.25, 0))
+        self.assertAlmostEqual(strategy.equity, 37.5, 1)
+        strategy.forward((0, 0, 0, 2, 0))
+        self.assertEqual(len(strategy.trades), 3)
+        self.assertAlmostEqual(strategy.equity, 0.0, 1)
+        strategy.forward((0, 0, 0, 2, 0))
+        self.assertAlmostEqual(strategy.equity, 0.0, 1)
 
     def test_limiter_strategy(self):
         param_storage = ParamStorage()
