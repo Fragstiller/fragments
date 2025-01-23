@@ -1,4 +1,4 @@
-# fragments - Procedural Trading Stratery Optimization Library
+# fragments - Procedural Trading Strategy Optimization Library
 
 This library allows you to procedurally find trading strategies for financial markets. Work in progress.
 
